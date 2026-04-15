@@ -93,7 +93,7 @@ $docFields = [
             <!-- Navigation Link Overlay -->
             <a href="#" @click.prevent="selectedDriver = <?php echo htmlspecialchars(json_encode($d), ENT_QUOTES, 'UTF-8'); ?>; showDetails = true;" class="absolute inset-0 z-10"></a>
 
-            <div class="relative z-20">
+            <div class="relative">
                 <div class="flex items-start justify-between mb-8">
                     <div class="relative">
                         <div class="w-20 h-20 rounded-[28px] bg-slate-50 p-0.5 border border-slate-100 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
@@ -267,7 +267,7 @@ $docFields = [
                                 <div class="grid grid-cols-2 gap-6">
                                     <div class="space-y-1">
                                         <p class="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]"><?php echo __('car_type'); ?></p>
-                                        <p class="text-xs font-black text-slate-800 uppercase italic" x-text="(selectedDriver.car_type || 'normal').toUpperCase()"></p>
+                                        <p class="text-xs font-black text-slate-800 uppercase italic" x-data="{ ct: (selectedDriver.car_type || 'economy') }" x-init="$watch('ct', v => { fetch('api/driver_action.php', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=update_car_type&user_id='+selectedDriver.id+'&doc_id='+selectedDriver.doc_id+'&car_type='+v}); selectedDriver.car_type=v; })"><select x-model="ct" class="bg-slate-50 text-xs font-black uppercase px-3 py-1 rounded-lg border border-slate-200 cursor-pointer"><option value="economy">ECONOMY</option><option value="comfort">COMFORT</option><option value="premium">PREMIUM</option></select></p>
                                     </div>
                                     <div class="space-y-1">
                                         <p class="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]"><?php echo __('car_model'); ?></p>

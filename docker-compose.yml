@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # ─── PHP-FPM (Laravel Backend) ───
+  app:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: zygo-app
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+      - ./dashboard:/var/www/dashboard
+    networks:
+      - zygo-net
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - REDIS_HOST=redis
+
+  # ─── Nginx Web Server ───
+  nginx:
+    image: nginx:alpine
+    container_name: zygo-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend:/var/www/backend
+      - ./dashboard:/var/www/dashboard
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - certbot-www:/var/www/certbot
+    networks:
+      - zygo-net
+    depends_on:
+      - app
+
+  # ─── MySQL 8.0 ───
+  db:
+    image: mysql:8.0
+    container_name: zygo-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ZygoDb@Secure2026
+      MYSQL_DATABASE: zego_taxi_db
+      MYSQL_USER: zygo_user
+      MYSQL_PASSWORD: ZygoApp@Pass2026
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - zygo-net
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ─── Redis ───
+  redis:
+    image: redis:alpine
+    container_name: zygo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - zygo-net
+
+  # ─── Laravel Reverb (WebSocket Server) ───
+  reverb:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: zygo-reverb
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    command: php artisan reverb:start --host=0.0.0.0 --port=6001
+    volumes:
+      - ./backend:/var/www/backend
+    ports:
+      - "6001:6001"
+    networks:
+      - zygo-net
+    depends_on:
+      - db
+      - redis
+
+  # ─── Laravel Queue Worker ───
+  queue:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: zygo-queue
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - ./backend:/var/www/backend
+    networks:
+      - zygo-net
+    depends_on:
+      - db
+      - redis
+
+  # ─── Laravel Scheduler (Cron) ───
+  scheduler:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: zygo-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction >> /var/www/backend/storage/logs/scheduler.log 2>&1; sleep 60; done"
+    volumes:
+      - ./backend:/var/www/backend
+    networks:
+      - zygo-net
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  mysql-data:
+  certbot-www:
+
+networks:
+  zygo-net:
+    driver: bridge

@@ -49,6 +49,7 @@ class RideController extends Controller
             'rider_id' => $request->user()->id,
             'status' => 'searching',
             'ride_code' => strtoupper(substr(md5(uniqid()), 0, 6)),
+            'share_token' => substr(md5(uniqid(rand(), true)), 0, 16),
             'pickup_lat' => $request->pickup_lat,
             'pickup_lng' => $request->pickup_lng,
             'pickup_address' => $request->pickup_address,
@@ -681,5 +682,13 @@ class RideController extends Controller
             'pickup_address' => $ride->pickup_address,
             'dropoff_address' => $ride->dropoff_address,
         ]);
+    }
+    public function trackByToken($token) {
+        $ride = \App\Models\Ride::where("share_token", $token)->first();
+        if (!$ride) return response()->json(["status" => "not_found"], 404);
+        if (in_array($ride->status, ["completed", "cancelled"])) return response()->json(["status" => "ended", "final_status" => $ride->status]);
+        $driver = $ride->driver;
+        $driverDoc = $driver ? \App\Models\DriverDocument::where("user_id", $driver->id)->first() : null;
+        return response()->json(["status" => $ride->status, "pickup_lat" => (float)$ride->pickup_lat, "pickup_lng" => (float)$ride->pickup_lng, "pickup_address" => $ride->pickup_address, "dropoff_lat" => (float)$ride->dropoff_lat, "dropoff_lng" => (float)$ride->dropoff_lng, "dropoff_address" => $ride->dropoff_address, "driver" => $driver ? ["name" => $driver->name, "lat" => (float)$driver->last_latitude, "lng" => (float)$driver->last_longitude, "bearing" => (float)($driver->last_bearing ?? 0), "vehicle" => ["model" => $driverDoc?->car_model ?? "Car", "plate" => $driverDoc?->car_plate ?? "", "color" => $driverDoc?->car_color ?? ""]] : null]);
     }
 }

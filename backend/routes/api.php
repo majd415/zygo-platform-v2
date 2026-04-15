@@ -41,6 +41,7 @@ Route::middleware('throttle:60,1')->prefix('auth')->group(function () {
 Route::get('/settings', [SettingController::class, 'index']);
 Route::get('/advertisements', [AdvertisementController::class, 'index']);
 Route::get('/rides/heatmap', [RideController::class, 'getHeatmapData']);
+Route::get('/ride/track/{token}', [RideController::class, 'trackByToken']);
 
 Route::middleware(['auth:sanctum', 'throttle:300,1'])->group(function () {
     Route::get('/user', function (Request $request) {

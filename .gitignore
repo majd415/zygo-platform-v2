@@ -12,3 +12,4 @@ dashboard/config.php
 .DS_Store
 Thumbs.db
 *.log
+backend/storage/app/firebase/service-account.json

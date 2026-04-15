@@ -13,6 +13,7 @@ class Ride extends Model
         'rider_id',
         'driver_id',
         'ride_code',
+        'share_token',
         'pickup_address',
         'pickup_lat',
         'pickup_lng',

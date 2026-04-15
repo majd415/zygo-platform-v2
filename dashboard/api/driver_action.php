@@ -55,6 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'user_id' => $userId
         ]);
         header('Location: ' . $redirectTo . '&status=notified');
+    } elseif ($action === 'update_car_type') {
+        $carType = $_POST['car_type'] ?? 'economy';
+        $docId = (int)($_POST['doc_id'] ?? 0);
+        if ($docId > 0) { $driverModel->query("UPDATE driver_documents SET car_type = ? WHERE id = ?", [$carType, $docId]); }
+        header('Location: ' . $redirectTo . '&status=updated');
+        exit;
     } elseif ($action === 'delete') {
         $driverModel->deleteDriver($userId);
         header('Location: ../index.php?p=drivers&status=deleted');
