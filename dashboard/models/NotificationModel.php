@@ -1,6 +1,4 @@
 <?php
-// C:\xampp\htdocs\dashboardtaxi\models\NotificationModel.php
-
 class NotificationModel extends Model {
     public function getNotifications($limit = 4, $offset = 0) {
         return $this->query("SELECT * FROM notifications ORDER BY created_at DESC LIMIT $limit OFFSET $offset")->fetchAll();
@@ -26,39 +24,67 @@ class NotificationModel extends Model {
         $message_en = $data['message_en'];
         $message_ar = $data['message_ar'];
         $type = $data['type'] ?? 'important';
-        $target = $data['target']; // all, drivers, riders, specific
+        $target = $data['target'];
         $userId = $data['user_id'] ?? null;
         $image = $data['image'] ?? null;
         $link = $data['link'] ?? null;
 
-        // Store in DB
         $sql = "INSERT INTO notifications (title_en, title_ar, message_en, message_ar, type, user_id, image, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
         $result = $this->query($sql, [$title_en, $title_ar, $message_en, $message_ar, $type, $target === 'specific' ? $userId : null, $image, $link]);
-        
-        // Execute background Artisan worker
-        $artisanPath = 'C:/xampp/htdocs/taxiApp_backend/backend/artisan';
-        $cmdTitleEn = escapeshellarg($title_en);
-        $cmdTitleAr = escapeshellarg($title_ar);
-        $cmdMsgEn = escapeshellarg($message_en);
-        $cmdMsgAr = escapeshellarg($message_ar);
-        $cmdType = escapeshellarg($type);
-        $cmdTarget = escapeshellarg($target);
 
-        $cmd = "php $artisanPath broadcast:push --target=$cmdTarget --title_en=$cmdTitleEn --title_ar=$cmdTitleAr --message_en=$cmdMsgEn --message_ar=$cmdMsgAr --type=$cmdType";
-        
+        $tokens = [];
         if ($target === 'specific' && !empty($userId)) {
-            $cmdUserId = escapeshellarg($userId);
-            $cmd .= " --user_id=$cmdUserId";
-        }
-
-        // Dispatch background shell exec gracefully on Windows Host
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            pclose(popen("start /B " . $cmd, "r")); 
+            $row = $this->query("SELECT fcm_token FROM users WHERE id = ? AND fcm_token IS NOT NULL", [$userId])->fetch();
+            if ($row && $row['fcm_token']) $tokens[] = $row['fcm_token'];
         } else {
-            exec($cmd . " > /dev/null 2>&1 &");  
+            $condition = "WHERE fcm_token IS NOT NULL AND fcm_token != ''";
+            if ($target === 'drivers') $condition = "WHERE role = 'driver' AND fcm_token IS NOT NULL AND fcm_token != ''";
+            elseif ($target === 'riders') $condition = "WHERE role = 'rider' AND fcm_token IS NOT NULL AND fcm_token != ''";
+            $rows = $this->query("SELECT fcm_token FROM users $condition")->fetchAll();
+            foreach ($rows as $row) {
+                if (!empty($row['fcm_token'])) $tokens[] = $row['fcm_token'];
+            }
         }
 
+        if (!empty($tokens)) {
+            $this->sendFcmNotifications($tokens, $title_en, $title_ar, $message_en, $message_ar, $type);
+        }
         return $result;
+    }
+
+    private function sendFcmNotifications($tokens, $titleEn, $titleAr, $msgEn, $msgAr, $type) {
+        $serviceAccountPath = '/var/www/backend/storage/app/firebase/service-account.json';
+        if (!file_exists($serviceAccountPath)) return;
+        $sa = json_decode(file_get_contents($serviceAccountPath), true);
+        $accessToken = $this->getFirebaseAccessToken($sa);
+        if (!$accessToken) return;
+
+        $projectId = $sa['project_id'];
+        $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+        foreach (array_chunk($tokens, 500) as $chunk) {
+            foreach ($chunk as $token) {
+                $message = ['message' => ['token' => $token, 'notification' => ['title' => $titleEn, 'body' => $msgEn], 'data' => ['title_en' => $titleEn, 'title_ar' => $titleAr, 'message_en' => $msgEn, 'message_ar' => $msgAr, 'type' => $type]]];
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken, 'Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode($message), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5]);
+                curl_exec($ch);
+                curl_close($ch);
+            }
+        }
+    }
+
+    private function getFirebaseAccessToken($sa) {
+        $now = time();
+        $header = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
+        $payload = base64_encode(json_encode(['iss' => $sa['client_email'], 'scope' => 'https://www.googleapis.com/auth/firebase.messaging', 'aud' => 'https://oauth2.googleapis.com/token', 'iat' => $now, 'exp' => $now + 3600]));
+        $toSign = str_replace(['+', '/', '='], ['-', '_', ''], $header) . '.' . str_replace(['+', '/', '='], ['-', '_', ''], $payload);
+        openssl_sign($toSign, $signature, $sa['private_key'], 'SHA256');
+        $jwt = $toSign . '.' . str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+        $ch = curl_init('https://oauth2.googleapis.com/token');
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query(['grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion' => $jwt]), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
+        $resp = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+        return $resp['access_token'] ?? null;
     }
 }
 ?>
