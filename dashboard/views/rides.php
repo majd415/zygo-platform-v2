@@ -188,7 +188,7 @@ $totalPages = ceil($totalRides / $limit);
 </div>
 
 <!-- Edit Price Modal (Simple) -->
-<div id="price-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-show="modalOpen" x-cloak style="display:none;">
+<div id="price-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" style="display:none;">
     <div class="glass-card w-full max-w-md p-10 rounded-[40px] shadow-2xl">
         <div class="flex justify-between items-center mb-8">
             <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Edit Ride Price</h3>
