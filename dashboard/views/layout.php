@@ -44,8 +44,8 @@
             overflow-x: hidden;
         }
         .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 1);
+            
             border: 1px solid rgba(0, 51, 132, 0.05);
             box-shadow: 0 4px 25px rgba(0, 0, 0, 0.03);
         }
@@ -165,13 +165,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            gsap.from(".glass-card:not(.h-full)", {
-                duration: 0.4,
-                opacity: 0,
-                y: 20,
-                stagger: 0.05,
-                ease: "power2.out"
-            });
         });
     </script>
 </body>

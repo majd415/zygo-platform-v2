@@ -2,7 +2,12 @@
 // C:\xampp\htdocs\dashboardtaxi\views\drivers_approval.php
 $statusFilter = $_GET['status'] ?? '';
 $search = $_GET['search'] ?? '';
-$drivers = $driverModel->getAllDrivers($statusFilter, $search);
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 8;
+$allDrivers = $driverModel->getAllDrivers($statusFilter, $search);
+$totalDrivers = count($allDrivers);
+$totalPages = max(1, ceil($totalDrivers / $perPage));
+$drivers = array_slice($allDrivers, ($page - 1) * $perPage, $perPage);
 
 // Group documents for easy access in Alpine
 $docFields = [
@@ -166,6 +171,28 @@ $docFields = [
         </div>
         <?php endforeach; ?>
     </div>
+
+    <?php if ($totalPages > 1): ?>
+    <div class="flex items-center justify-center gap-3 mt-10">
+        <?php if ($page > 1): ?>
+        <a href="?p=drivers<?php echo $statusFilter ? '&status='.$statusFilter : ''; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>&page=<?php echo $page-1; ?>" 
+           class="px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-primary hover:text-white hover:border-primary transition-all text-xs font-black uppercase tracking-widest shadow-sm">
+            ← <?php echo __('previous') ?? 'Previous'; ?>
+        </a>
+        <?php endif; ?>
+        
+        <span class="px-6 py-3 rounded-2xl bg-primary text-white text-xs font-black tracking-widest shadow-premium">
+            <?php echo $page; ?> / <?php echo $totalPages; ?>
+        </span>
+        
+        <?php if ($page < $totalPages): ?>
+        <a href="?p=drivers<?php echo $statusFilter ? '&status='.$statusFilter : ''; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>&page=<?php echo $page+1; ?>" 
+           class="px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-primary hover:text-white hover:border-primary transition-all text-xs font-black uppercase tracking-widest shadow-sm">
+            <?php echo __('next') ?? 'Next'; ?> →
+        </a>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Details Modal (Alpine.js) -->
     <div x-show="showDetails" 
