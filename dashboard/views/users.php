@@ -18,7 +18,7 @@ $allUserIds = array_column($users, 'id');
 <div class="space-y-6" x-data="{ 
     showEditModal: false, 
     showWalletModal: false, 
-    selectedUser: null,
+    selectedUser: {id:'', name:'', email:'', phone:'', role:'rider', service_category:'economy', wallet_balance:0},
     selectedIds: [],
     get allIds() { return <?php echo json_encode($allUserIds); ?>; },
     toggleAll() {
@@ -250,7 +250,7 @@ $allUserIds = array_column($users, 'id');
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1"><?php echo __('access'); ?> (Role)</label>
-                        <select name="role" x-model="selectedUser.role" v-if="selectedUser"
+                        <select name="role" x-model="selectedUser.role"
                                 class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-primary transition appearance-none">
                             <option value="rider">Rider (User)</option>
                             <option value="driver">Driver (Captain)</option>
