@@ -165,11 +165,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            gsap.from(".glass-card", {
-                duration: 0.8,
+            gsap.from(".glass-card:not(.h-full)", {
+                duration: 0.4,
                 opacity: 0,
                 y: 20,
-                stagger: 0.1,
+                stagger: 0.05,
                 ease: "power2.out"
             });
         });
